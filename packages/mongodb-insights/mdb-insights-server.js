@@ -2,6 +2,7 @@ import { check, Match } from 'meteor/check';
 import { MongoInternals } from 'meteor/mongo';
 
 let authenticationHook = () => true;
+let mongoConnectionHook = () => MongoInternals.defaultRemoteCollectionDriver().mongo.db;
 
 const setAuthenticationHook = (hook) => {
   if (typeof hook !== 'function') {
@@ -10,11 +11,18 @@ const setAuthenticationHook = (hook) => {
   authenticationHook = hook;
 };
 
+const setMongoConnectionHook = (hook) => {
+  if (typeof hook !== 'function') {
+    throw new Error('MongoDB connection hook must be a function');
+  }
+  mongoConnectionHook = hook;
+};
+
 Meteor.startup(async () => {
   console.log('MongoDB insights server started');
 });
 
-const getMongoDB = () => MongoInternals.defaultRemoteCollectionDriver().mongo.db;
+const getMongoDB = () => mongoConnectionHook();
 
 const getProfileStatus = () => {
   return getMongoDB().command({ profile: -1 });
@@ -65,17 +73,25 @@ const analyzeQueries = async ({ minMillis = 100, collection = null, startDate = 
     const issues = [];
 
     const generateIndexSuggestion = (query) => {
-      if (query.op === 'query' && query.query) {
-        const fields = Object.keys(query.query);
-        console.log('query', fields);
-        return `db.${query.ns.split('.')[1]}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
+      if (query.op === 'query') {
+        if (query.query && Object.keys(query.query).length > 0) {
+          const fields = Object.keys(query.query);
+          return `db.${query.ns.split('.')[1]}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
+        } else if (query.orderby && Object.keys(query.orderby).length > 0) {
+          const fields = Object.keys(query.orderby);
+          return `db.${query.ns.split('.')[1]}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
+        }
       } else if (query.op === 'command' && query.command?.aggregate) {
         const pipeline = query.command.pipeline;
-        console.log('aggregation', pipeline);
         if (pipeline && pipeline.length > 0) {
           const matchStage = pipeline.find(stage => stage.$match);
-          if (matchStage) {
+          if (matchStage && Object.keys(matchStage.$match).length > 0) {
             const fields = Object.keys(matchStage.$match);
+            return `db.${query.command.aggregate}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
+          }
+          const sortStage = pipeline.find(stage => stage.$sort);
+          if (sortStage && Object.keys(sortStage.$sort).length > 0) {
+            const fields = Object.keys(sortStage.$sort);
             return `db.${query.command.aggregate}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
           }
         }
@@ -127,10 +143,25 @@ const analyzeQueries = async ({ minMillis = 100, collection = null, startDate = 
       });
     }
 
+    let queryDetails;
+    if (query.op === 'query') {
+      queryDetails = {
+        type: 'find',
+        filter: query.query || {},
+        sort: query.orderby
+      };
+    } else if (query.op === 'command' && query.command?.aggregate) {
+      queryDetails = {
+        type: 'aggregate',
+        pipeline: query.command.pipeline || []
+      };
+    }
+
     return {
       operation: query.op,
       namespace: query.ns,
       query: query.query,
+      queryDetails,
       executionTime: query.millis,
       timestamp: query.ts,
       issues
@@ -167,4 +198,4 @@ Meteor.methods({
   }
 });
 
-export { setAuthenticationHook };
+export { setAuthenticationHook, setMongoConnectionHook };

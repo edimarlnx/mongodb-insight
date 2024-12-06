@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Meteor } from 'meteor/meteor';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
 
 export const MongoDBInsights = () => {
   const [profileLevel, setProfileLevel] = useState(0);
@@ -12,6 +13,8 @@ export const MongoDBInsights = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [expandedQueries, setExpandedQueries] = useState(new Set());
 
   const handleSetProfileLevel = (level) => {
     setLoading(true);
@@ -49,12 +52,45 @@ export const MongoDBInsights = () => {
 
   const paginatedResults = () => {
     if (!results) return [];
+    
+    const filteredResults = results.filter(result => {
+      if (severityFilter === 'all') return true;
+      return result.issues.some(issue => 
+        issue.severity.toLowerCase() === severityFilter.toLowerCase()
+      );
+    });
+    
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return results.slice(startIndex, endIndex);
+    return filteredResults.slice(startIndex, endIndex);
   };
 
-  const totalPages = results ? Math.ceil(results.length / itemsPerPage) : 0;
+  const totalPages = results ? Math.ceil(paginatedResults().length / itemsPerPage) : 0;
+
+  const getSeverityColor = (severity) => {
+    switch (severity.toLowerCase()) {
+      case 'high':
+        return 'bg-red-600';
+      case 'medium':
+        return 'bg-yellow-600';
+      case 'low':
+        return 'bg-blue-600';
+      default:
+        return 'bg-gray-600';
+    }
+  };
+
+  const toggleQueryDetails = (index) => {
+    setExpandedQueries(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="p-6 bg-gray-900">
@@ -142,6 +178,19 @@ export const MongoDBInsights = () => {
             <h2 className="text-lg font-semibold text-white">Analysis Results</h2>
             <div className="flex items-center gap-4">
               <select
+                value={severityFilter}
+                onChange={(e) => {
+                  setSeverityFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="bg-gray-800 border border-gray-700 text-white rounded px-3 py-1"
+              >
+                <option value="all">All Severities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+              <select
                 value={itemsPerPage}
                 onChange={(e) => {
                   setItemsPerPage(Number(e.target.value));
@@ -179,19 +228,46 @@ export const MongoDBInsights = () => {
           
           {paginatedResults().map((result, index) => (
             <div key={index} className="mb-6 p-4 bg-gray-800 shadow rounded">
-              <div className="mb-2 text-gray-200">
-                <span className="font-semibold">Operation:</span> {result.operation}
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="mb-2 text-gray-200">
+                    <span className="font-semibold">Operation:</span> {result.operation}
+                  </div>
+                  <div className="mb-2 text-gray-200">
+                    <span className="font-semibold">Namespace:</span> {result.namespace}
+                  </div>
+                  <div className="mb-2 text-gray-200">
+                    <span className="font-semibold">Execution Time:</span> {result.executionTime}ms
+                  </div>
+                  <div className="mb-2 text-gray-200">
+                    <span className="font-semibold">Timestamp:</span>{' '}
+                    {result.timestamp ? new Date(result.timestamp).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+                
+                {result.queryDetails && (
+                  <button
+                    onClick={() => toggleQueryDetails(index)}
+                    className="flex items-center gap-1 px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200"
+                  >
+                    Query Details
+                    {expandedQueries.has(index) ? (
+                      <ChevronUpIcon className="w-4 h-4" />
+                    ) : (
+                      <ChevronDownIcon className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
               </div>
-              <div className="mb-2 text-gray-200">
-                <span className="font-semibold">Namespace:</span> {result.namespace}
-              </div>
-              <div className="mb-2 text-gray-200">
-                <span className="font-semibold">Execution Time:</span> {result.executionTime}ms
-              </div>
-              <div className="mb-2 text-gray-200">
-                <span className="font-semibold">Timestamp:</span>{' '}
-                {result.timestamp ? new Date(result.timestamp).toLocaleString() : 'N/A'}
-              </div>
+
+              {expandedQueries.has(index) && result.queryDetails && (
+                <div className="mt-4 p-3 bg-gray-700 rounded">
+                  <pre className="text-sm text-gray-200 overflow-x-auto">
+                    {JSON.stringify(result.queryDetails, null, 2)}
+                  </pre>
+                </div>
+              )}
+
               {result.issues.length > 0 && (
                 <div className="mt-4">
                   <h3 className="font-semibold mb-2 text-gray-200">Issues:</h3>
@@ -201,7 +277,10 @@ export const MongoDBInsights = () => {
                         <span className="font-semibold">Type:</span> {issue.type}
                       </div>
                       <div className="text-sm text-gray-200">
-                        <span className="font-semibold">Severity:</span> {issue.severity}
+                        <span className="font-semibold">Severity:</span>{' '}
+                        <span className={`${getSeverityColor(issue.severity)} px-2 py-0.5 rounded-full text-xs`}>
+                          {issue.severity}
+                        </span>
                       </div>
                       <div className="text-sm text-gray-200">{issue.message}</div>
                       <div className="text-sm text-gray-400">{issue.suggestion}</div>
