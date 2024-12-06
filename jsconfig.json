@@ -1,0 +1,73 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "allowJs": true,
+    "jsx": "react",
+    "baseUrl": ".",
+    "paths": {
+      "/*": [
+        "./*"
+      ],
+      "meteor/mongo": [
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/local_collection_driver.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/collection/collection.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/asynchronous_cursor.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/doc_fetcher.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/mongo_common.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/mongo_connection.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/mongo_driver.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/mongo_utils.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/oplog_observe_driver.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/oplog_v2_converter.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/collection/collection_utils.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/collection/methods_async.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/collection/methods_index.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/collection/methods_replication.js",
+        "/home/edimar/.meteor/packages/mongo/2.0.3/web.browser/collection/methods_sync.js"
+      ],
+      "meteor/reactive-var": [
+        "/home/edimar/.meteor/packages/reactive-var/1.0.13/web.browser/reactive-var.js"
+      ],
+      "meteor/es5-shim": [
+        "/home/edimar/.meteor/packages/es5-shim/4.8.1/web.browser/client.js",
+        "/home/edimar/.meteor/packages/es5-shim/4.8.1/web.browser/console.js",
+        "/home/edimar/.meteor/packages/es5-shim/4.8.1/web.browser/cordova.js",
+        "/home/edimar/.meteor/packages/es5-shim/4.8.1/web.browser/export_globals.js",
+        "/home/edimar/.meteor/packages/es5-shim/4.8.1/web.browser/import_globals.js"
+      ],
+      "meteor/ecmascript": [
+        "/home/edimar/.meteor/packages/ecmascript/0.16.10/web.browser/ecmascript.js"
+      ],
+      "meteor/shell-server": [
+        "/home/edimar/.meteor/packages/shell-server/0.6.1/web.browser/main.js",
+        "/home/edimar/.meteor/packages/shell-server/0.6.1/web.browser/shell-server.js"
+      ],
+      "meteor/hot-module-replacement": [
+        "/home/edimar/.meteor/packages/hot-module-replacement/0.5.4/web.browser/hot-api.js",
+        "/home/edimar/.meteor/packages/hot-module-replacement/0.5.4/web.browser/client.js",
+        "/home/edimar/.meteor/packages/hot-module-replacement/0.5.4/web.browser/server.js"
+      ],
+      "meteor/react-meteor-data": [
+        "/home/edimar/.meteor/packages/react-meteor-data/3.0.2/web.browser/index.js",
+        "/home/edimar/.meteor/packages/react-meteor-data/3.0.2/web.browser/suspense/index.js"
+      ],
+      "meteor/mongodb-insights": [
+        "packages/mongodb-insights/mdb-insights-server.js"
+      ],
+      "meteor/accounts-password": [
+        "/home/edimar/.meteor/packages/accounts-password/3.0.3/web.browser/password_client.js",
+        "/home/edimar/.meteor/packages/accounts-password/3.0.3/web.browser/email_templates.js",
+        "/home/edimar/.meteor/packages/accounts-password/3.0.3/web.browser/password_server.js"
+      ]
+    }
+  },
+  "typeAcquisition": {
+    "include": [
+      "meteor"
+    ]
+  },
+  "exclude": [
+    "node_modules",
+    ".meteor"
+  ]
+}
