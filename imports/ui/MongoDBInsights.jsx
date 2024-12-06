@@ -16,6 +16,16 @@ export const MongoDBInsights = () => {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [expandedQueries, setExpandedQueries] = useState(new Set());
 
+  useEffect(() => {
+    Meteor.call('mongodb.profile.status', (error, result) => {
+      if (error) {
+        setError(error.message);
+      } else {
+        setProfileLevel(result.was);
+      }
+    });
+  }, []);
+
   const handleSetProfileLevel = (level) => {
     setLoading(true);
     Meteor.call('mongodb.profile.set', level, (error) => {

@@ -1,6 +1,15 @@
 # MongoDB Insights for Meteor
 
-MongoDB Insights is a Meteor package that provides monitoring and analysis tools for MongoDB operations in your Meteor application. It helps you identify performance issues, slow queries, and provides index recommendations.
+MongoDB Insights is a Meteor package that provides real-time monitoring and analysis tools for MongoDB operations in your Meteor application. It helps developers identify performance bottlenecks, optimize queries, and maintain database efficiency.
+
+## Key Features
+
+- Real-time query profiling and analysis
+- Slow query detection and alerting
+- Index usage monitoring and recommendations
+- Performance metrics visualization
+- Secure authentication system
+- Customizable monitoring parameters
 
 ## Installation
 
@@ -8,159 +17,101 @@ MongoDB Insights is a Meteor package that provides monitoring and analysis tools
 meteor add mongodb-insights
 ```
 
-## Features
+## Quick Start
 
-- Query profiling and analysis
-- Slow query detection
-- Index usage monitoring
-- Performance recommendations
-- Customizable authentication
-
-## Usage
-
-### Basic Setup
-
-First, import and configure the authentication hook in your server code:
+1. Configure authentication in your server code:
 
 ```javascript
 import { setAuthenticationHook } from 'meteor/mongodb-insights';
 
-// Example: Only allow admin users to access insights
 setAuthenticationHook(() => {
   const user = Meteor.user();
   return user && user.isAdmin;
 });
 ```
 
-### Available Methods
-
-#### 1. Profile Status
-
-Check the current profiling status:
+2. Optional: Configure a separate MongoDB connection for analysis:
 
 ```javascript
-Meteor.call('mongodb.profile.status', (error, result) => {
-  if (!error) {
-    console.log('Profile status:', result);
-  }
-});
+import { setMongoConnectionHook } from 'meteor/mongodb-insights';
+import { MongoClient } from 'mongodb';
+
+const mongoClient = new MongoClient(process.env.MONGO_ANALYSIS_URL);
+await mongoClient.connect();
+setMongoConnectionHook(() => mongoClient.db());
 ```
 
-#### 2. Set Profile Level
+## Core Features
 
-Set the profiling level (0: off, 1: slow queries, 2: all queries):
+### Profile Management
+- Set profiling levels (0: off, 1: slow queries, 2: all queries)
+- Configure minimum query execution time threshold
+- Filter by collection and date range
 
-```javascript
-Meteor.call('mongodb.profile.set', 1, (error, result) => {
-  if (!error) {
-    console.log('Profile level set');
-  }
-});
-```
+### Query Analysis
+Provides detailed insights including:
+- Query execution time
+- Index usage
+- Scan-to-return ratios
+- Performance recommendations
+- Suggested indexes
 
-#### 3. Query Analysis
-
-Analyze queries with custom filters:
-
-```javascript
-const params = {
-  minMillis: 100,        // Minimum execution time in milliseconds (default: 100)
-  collection: 'users',   // Optional: Filter by collection name
-  startDate: new Date('2024-01-01'), // Optional: Filter by start date
-  endDate: new Date()    // Optional: Filter by end date
-};
-
-Meteor.call('mongodb.profile.analyze', params, (error, results) => {
-  if (!error) {
-    results.forEach(result => {
-      console.log('Namespace:', result.namespace);
-      console.log('Operation:', result.operation);
-      console.log('Query:', result.query);
-      console.log('Execution time:', result.executionTime);
-      console.log('Timestamp:', result.timestamp);
-      console.log('Issues:', result.issues);
-    });
-  }
-});
-```
-
-### Analysis Results
-
-The analysis provides information about:
-
-- Queries not using indexes
-- High scan-to-return ratios
-- Slow queries (>1000ms)
-- Index recommendations
-
-Each issue includes:
-- Type of issue
-- Severity (low, medium, high)
-- Description message
-- Suggested solution
-- Recommended index creation command (when applicable)
-
-## Security
-
-By default, the package requires authentication to be configured. Use `setAuthenticationHook` to define your access control logic:
-
-```javascript
-import { setAuthenticationHook } from 'meteor/mongodb-insights';
-
-setAuthenticationHook(() => {
-  // Your authentication logic here
-  // Return true to allow access, false to deny
-  return Meteor.user()?.roles?.includes('dbAdmin');
-});
-```
+### Security
+- Built-in authentication system
+- Role-based access control
+- Configurable security hooks
 
 ## API Reference
 
-### Methods
+### Server Methods
 
 #### `mongodb.profile.status()`
-Returns the current profiling status of MongoDB.
+Returns current MongoDB profiling status.
 
 #### `mongodb.profile.set(level)`
-Sets the profiling level:
-- `0`: Profiling off
-- `1`: Profile slow queries (>100ms)
-- `2`: Profile all queries
-
-#### `mongodb.profile.queries(params)`
-Retrieves raw profiled queries with optional filters:
-- `minMillis`: Minimum query time in milliseconds (default: 100)
-- `collection`: Filter by collection name
-- `startDate`: Start date for query range
-- `endDate`: End date for query range
+Sets profiling level:
+- `0`: Disabled
+- `1`: Collect slow queries
+- `2`: Collect all queries
 
 #### `mongodb.profile.analyze(params)`
-Analyzes queries and provides performance recommendations. Accepts the same parameters as `mongodb.profile.queries`.
+Analyzes queries with optional filters:
 
-Returns an array of analyzed queries, each containing:
-- `operation`: Type of operation ('query' or 'command')
-- `namespace`: Database and collection name
-- `query`: The query object
-- `executionTime`: Query execution time in milliseconds
-- `timestamp`: When the query was executed
-- `issues`: Array of detected issues, each containing:
-  - `type`: Issue type ('NO_INDEX', 'HIGH_SCAN_RATIO', or 'SLOW_QUERY')
-  - `severity`: Issue severity ('low', 'medium', or 'high')
-  - `message`: Description of the issue
-  - `suggestion`: Recommended action
-  - `recommendedIndex`: Suggested index creation command (when applicable)
+```javascript
+{
+  minMillis: 100,        // Minimum execution time
+  collection: 'users',   // Target collection
+  startDate: new Date(), // Analysis start date
+  endDate: new Date()    // Analysis end date
+}
+```
 
 ## Best Practices
 
-1. Start with profiling level 1 in production to capture slow queries
-2. Use specific date ranges when analyzing queries to limit data volume
-3. Implement proper authentication to protect sensitive query data
-4. Review and test recommended indexes before applying them in production
+1. Start with profiling level 1 in production
+2. Use date ranges to limit analysis scope
+3. Review index recommendations before implementation
+4. Monitor slow queries regularly
+5. Implement proper access control
+
+## Environment Variables
+
+- `ADMIN_USERNAME`: Admin user login (default: 'admin')
+- `ADMIN_PASSWORD`: Admin password (default: 'admin')
+- `MONGO_ANALYSIS_URL`: Optional separate MongoDB connection
+
+## UI Features
+
+- Dark mode interface
+- Query result pagination
+- Severity-based filtering
+- Expandable query details
+- Real-time updates
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
