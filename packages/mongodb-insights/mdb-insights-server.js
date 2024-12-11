@@ -1,8 +1,60 @@
 import { check, Match } from 'meteor/check';
 import { MongoInternals } from 'meteor/mongo';
+import { MongoClient } from 'mongodb';
 
 let authenticationHook = () => true;
 let mongoConnectionHook = () => MongoInternals.defaultRemoteCollectionDriver().mongo.db;
+let mongoClient = null;
+
+const createReadOnlyProxy = (db) => {
+  const handler = {
+    get: (target, prop) => {
+      // Block write operations
+      if (['insert', 'update', 'delete', 'remove', 'drop'].includes(prop)) {
+        return () => { throw new Error('Write operations not allowed in analysis mode'); };
+      }
+      // Only allow access to system.profile collection
+      if (prop === 'collection') {
+        return (name) => {
+          if (name !== 'system.profile') {
+            throw new Error('Access denied. Only system.profile collection is allowed.');
+          }
+          return target[prop](name);
+        };
+      }
+      return target[prop];
+    }
+  };
+  return new Proxy(db, handler);
+};
+
+const configureAnalysisConnection = async (connectionString, options = {}) => {
+  if (!connectionString) {
+    throw new Error('MongoDB connection string is required');
+  }
+
+  // Close existing connection if any
+  if (mongoClient) {
+    await mongoClient.close();
+  }
+
+  // Create new connection
+  mongoClient = new MongoClient(connectionString, {
+    readConcern: { level: 'local' },
+    monitorCommands: true,
+    ...options
+  });
+
+  await mongoClient.connect();
+
+  // Update the connection hook
+  mongoConnectionHook = () => {
+    const db = mongoClient.db();
+    return createReadOnlyProxy(db);
+  };
+
+  return mongoClient;
+};
 
 const setAuthenticationHook = (hook) => {
   if (typeof hook !== 'function') {
@@ -198,4 +250,4 @@ Meteor.methods({
   }
 });
 
-export { setAuthenticationHook, setMongoConnectionHook };
+export { setAuthenticationHook, setMongoConnectionHook, configureAnalysisConnection };

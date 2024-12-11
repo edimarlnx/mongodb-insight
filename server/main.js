@@ -1,8 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { ADMIN_USERNAME, ADMIN_PASSWORD } from './env';
-import { setAuthenticationHook, setMongoConnectionHook } from 'meteor/mongodb-insights';
-import { MongoClient } from 'mongodb';
+import { setAuthenticationHook, configureAnalysisConnection } from 'meteor/mongodb-insights';
 
 Meteor.startup(async () => {
     // Create admin user if it doesn't exist
@@ -17,10 +16,8 @@ Meteor.startup(async () => {
 
     // Configure alternative MongoDB connection if MONGO_ANALYSIS_URL is defined
     if (process.env.MONGO_ANALYSIS_URL) {
-        console.log('Configuring alternative MongoDB connection for analysis...');
-        const mongoClient = new MongoClient(process.env.MONGO_ANALYSIS_URL);
-        await mongoClient.connect();
-        setMongoConnectionHook(() => mongoClient.db());
+        console.log('Configuring alternative MongoDB connection for analysis (read-only)...');
+        await configureAnalysisConnection(process.env.MONGO_ANALYSIS_URL);
     }
 
     // Set authentication hook for MongoDB Insights
