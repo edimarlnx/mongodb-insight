@@ -70,6 +70,11 @@ const params = {
 Meteor.call('mongodb.profile.analyze', params, (error, results) => {
   if (!error) console.log('Analysis results:', results);
 });
+
+// Create a suggested index
+Meteor.call('mongodb.createIndex', 'collectionName', { field1: 1, field2: 1 }, (error, result) => {
+  if (!error) console.log('Index created successfully:', result);
+});
 ```
 
 ### 4. Security Considerations
@@ -109,6 +114,26 @@ The analysis provides detailed information about each query:
   }]
 }
 ```
+
+### 7. Index Management
+
+The package provides functionality to create suggested indexes directly from the analysis results:
+
+```javascript
+// Example of creating an index from analysis recommendations
+const analysis = await Meteor.callAsync('mongodb.profile.analyze', params);
+const recommendation = analysis[0].issues.find(issue => issue.recommendedIndex);
+
+if (recommendation) {
+  // Parse the recommended index string into collection and spec
+  const [_, collection, indexSpec] = recommendation.recommendedIndex.match(/db\.(\w+)\.createIndex\((.+)\)/);
+  
+  // Create the suggested index
+  await Meteor.callAsync('mongodb.createIndex', collection, JSON.parse(indexSpec));
+}
+```
+
+Note: Index creation is allowed even in read-only mode to enable performance optimization based on analysis results.
 
 ## Best Practices
 

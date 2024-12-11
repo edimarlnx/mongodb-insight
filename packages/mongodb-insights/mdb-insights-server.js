@@ -9,15 +9,15 @@ let mongoClient = null;
 const createReadOnlyProxy = (db) => {
   const handler = {
     get: (target, prop) => {
-      // Block write operations
+      // Allow createIndex operation but block other write operations
       if (['insert', 'update', 'delete', 'remove', 'drop'].includes(prop)) {
         return () => { throw new Error('Write operations not allowed in analysis mode'); };
       }
-      // Only allow access to system.profile collection
+      // Allow access to system.profile collection and createIndex operations
       if (prop === 'collection') {
         return (name) => {
-          if (name !== 'system.profile') {
-            throw new Error('Access denied. Only system.profile collection is allowed.');
+          if (name !== 'system.profile' && !name.endsWith('.createIndex')) {
+            throw new Error('Access denied. Only system.profile collection and index creation are allowed.');
           }
           return target[prop](name);
         };
@@ -221,7 +221,18 @@ const analyzeQueries = async ({ minMillis = 100, collection = null, startDate = 
   });
 };
 
+const createSuggestedIndex = async (collection, indexSpec) => {
+  check(collection, String);
+  check(indexSpec, Object);
 
+  const db = getMongoDB();
+  try {
+    const result = await db.collection(collection).createIndex(indexSpec);
+    return { success: true, result };
+  } catch (error) {
+    throw new Meteor.Error('index-creation-failed', `Failed to create index: ${error.message}`);
+  }
+};
 
 Meteor.methods({
   'mongodb.profile.status': async () => {
@@ -247,6 +258,12 @@ Meteor.methods({
       throw new Meteor.Error('unauthorized', 'User not authorized to access MongoDB insights');
     }
     return await analyzeQueries(params);
+  },
+  'mongodb.createIndex': async (collection, indexSpec) => {
+    if (!authenticationHook()) {
+      throw new Meteor.Error('unauthorized', 'User not authorized to access MongoDB insights');
+    }
+    return await createSuggestedIndex(collection, indexSpec);
   }
 });
 

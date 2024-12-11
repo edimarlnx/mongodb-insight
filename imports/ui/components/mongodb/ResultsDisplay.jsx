@@ -7,16 +7,28 @@ export const ResultsDisplay = ({
   currentPage,
   itemsPerPage,
   severityFilter,
+  showOnlyWithIndex,
+  onShowOnlyWithIndexChange,
   onSeverityFilterChange,
   onItemsPerPageChange,
   onPageChange,
   paginatedResults,
-  totalPages
+  totalPages,
+  onCreateIndex
 }) => (
   <div className="mt-6">
     <div className="flex justify-between items-center mb-4">
       <h2 className="text-lg font-semibold text-white">Analysis Results</h2>
       <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2 text-gray-300">
+          <input
+            type="checkbox"
+            checked={showOnlyWithIndex}
+            onChange={onShowOnlyWithIndexChange}
+            className="rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
+          />
+          Show only with index suggestions
+        </label>
         <select
           value={severityFilter}
           onChange={onSeverityFilterChange}
@@ -46,8 +58,12 @@ export const ResultsDisplay = ({
       </div>
     </div>
     
-    {paginatedResults.map((result, index) => (
-      <QueryResult key={index} result={result} index={index} />
+    {paginatedResults && paginatedResults.map((queryResult, index) => (
+      <QueryResult 
+        key={index} 
+        result={queryResult} 
+        onCreateIndex={onCreateIndex}
+      />
     ))}
   </div>
 ); 

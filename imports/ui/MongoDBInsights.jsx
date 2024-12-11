@@ -3,6 +3,7 @@ import { Meteor } from 'meteor/meteor';
 import { ProfileLevelControls } from './components/mongodb/ProfileLevelControls';
 import { AnalysisControls } from './components/mongodb/AnalysisControls';
 import { ResultsDisplay } from './components/mongodb/ResultsDisplay';
+import { ConfirmationModal } from './components/mongodb/ConfirmationModal';
 
 export const MongoDBInsights = () => {
   const [profileLevel, setProfileLevel] = useState(0);
@@ -17,6 +18,9 @@ export const MongoDBInsights = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [severityFilter, setSeverityFilter] = useState('all');
   const [expandedQueries, setExpandedQueries] = useState(new Set());
+  const [showModal, setShowModal] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [showOnlyWithIndex, setShowOnlyWithIndex] = useState(false);
 
   useEffect(() => {
     Meteor.call('mongodb.profile.status', (error, result) => {
@@ -66,10 +70,13 @@ export const MongoDBInsights = () => {
     if (!results) return [];
     
     const filteredResults = results.filter(result => {
-      if (severityFilter === 'all') return true;
-      return result.issues.some(issue => 
-        issue.severity.toLowerCase() === severityFilter.toLowerCase()
-      );
+      const severityMatch = severityFilter === 'all' || 
+        result.issues.some(issue => issue.severity.toLowerCase() === severityFilter.toLowerCase());
+      
+      const indexMatch = !showOnlyWithIndex || 
+        result.issues.some(issue => issue.recommendedIndex);
+      
+      return severityMatch && indexMatch;
     });
     
     return filteredResults;
@@ -107,6 +114,26 @@ export const MongoDBInsights = () => {
       }
       return newSet;
     });
+  };
+
+  const handleCreateIndex = (indexSuggestion) => {
+    setSelectedIndex(indexSuggestion);
+    setShowModal(true);
+  };
+
+  const confirmCreateIndex = () => {
+    setLoading(true);
+    Meteor.call('mongodb.createIndex', selectedIndex, (error) => {
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else {
+        setError(null);
+        // Refresh analysis after creating index
+        handleAnalyze();
+      }
+    });
+    setShowModal(false);
   };
 
   return (
@@ -149,6 +176,11 @@ export const MongoDBInsights = () => {
           currentPage={currentPage}
           itemsPerPage={itemsPerPage}
           severityFilter={severityFilter}
+          showOnlyWithIndex={showOnlyWithIndex}
+          onShowOnlyWithIndexChange={(e) => {
+            setShowOnlyWithIndex(e.target.checked);
+            setCurrentPage(1);
+          }}
           onSeverityFilterChange={(e) => {
             setSeverityFilter(e.target.value);
             setCurrentPage(1);
@@ -160,8 +192,16 @@ export const MongoDBInsights = () => {
           onPageChange={setCurrentPage}
           paginatedResults={getCurrentPageResults()}
           totalPages={totalPages}
+          onCreateIndex={handleCreateIndex}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={confirmCreateIndex}
+        indexDetails={selectedIndex}
+      />
     </div>
   );
 }; 
