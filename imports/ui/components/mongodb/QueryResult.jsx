@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/solid';
 
-export const QueryResult = ({ result, index }) => {
+export const QueryResult = ({ result, index, onCreateIndex }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getSeverityColor = (severity) => {
@@ -76,8 +76,16 @@ export const QueryResult = ({ result, index }) => {
               <div className="text-sm text-gray-200">{issue.message}</div>
               <div className="text-sm text-gray-400">{issue.suggestion}</div>
               {issue.recommendedIndex && (
-                <div className="mt-1 p-2 bg-gray-900 rounded font-mono text-sm text-blue-400">
-                  {issue.recommendedIndex}
+                <div className="mt-1">
+                  <div className="p-2 bg-gray-900 rounded font-mono text-sm text-blue-400">
+                    {issue.recommendedIndex}
+                  </div>
+                  <button
+                    onClick={() => onCreateIndex(issue.recommendedIndex)}
+                    className="mt-2 px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center gap-1"
+                  >
+                    Create Index
+                  </button>
                 </div>
               )}
             </div>

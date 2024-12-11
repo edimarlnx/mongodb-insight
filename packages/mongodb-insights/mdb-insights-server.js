@@ -13,13 +13,23 @@ const createReadOnlyProxy = (db) => {
       if (['insert', 'update', 'delete', 'remove', 'drop'].includes(prop)) {
         return () => { throw new Error('Write operations not allowed in analysis mode'); };
       }
-      // Allow access to system.profile collection and createIndex operations
+      // Allow access to system.profile collection and createIndex on any collection
       if (prop === 'collection') {
         return (name) => {
-          if (name !== 'system.profile' && !name.endsWith('.createIndex')) {
-            throw new Error('Access denied. Only system.profile collection and index creation are allowed.');
-          }
-          return target[prop](name);
+          const collection = target[prop](name);
+          
+          // Create a proxy for the collection
+          return new Proxy(collection, {
+            get: (collTarget, collProp) => {
+              if (name === 'system.profile' || collProp === 'createIndex') {
+                return collTarget[collProp];
+              }
+              if (['insert', 'update', 'delete', 'remove', 'drop'].includes(collProp)) {
+                return () => { throw new Error('Write operations not allowed in analysis mode'); };
+              }
+              return collTarget[collProp];
+            }
+          });
         };
       }
       return target[prop];

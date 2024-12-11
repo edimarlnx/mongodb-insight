@@ -62,6 +62,7 @@ export const ResultsDisplay = ({
       <QueryResult 
         key={index} 
         result={queryResult} 
+        index={index}
         onCreateIndex={onCreateIndex}
       />
     ))}

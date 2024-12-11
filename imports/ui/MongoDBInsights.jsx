@@ -117,15 +117,50 @@ export const MongoDBInsights = () => {
   };
 
   const handleCreateIndex = (indexSuggestion) => {
-    setSelectedIndex(indexSuggestion);
-    setShowModal(true);
+    const matches = indexSuggestion.match(/db\.(\w+)\.createIndex\((.+)\)/);
+    if (!matches) {
+      setError('Invalid index suggestion format');
+      return;
+    }
+    
+    const [_, collection, indexSpecString] = matches;
+    try {
+      const cleanedSpecString = indexSpecString
+        .replace(/'/g, '"')
+        .replace(/NumberInt\((\d+)\)/g, '$1')
+        .replace(/NumberLong\((\d+)\)/g, '$1');
+      
+      const indexSpec = eval(`(${cleanedSpecString})`);
+      
+      setSelectedIndex({
+        collection,
+        indexSpec,
+        original: indexSuggestion
+      });
+      setShowModal(true);
+    } catch (err) {
+      console.error('Failed to parse index specification:', err);
+      setError('Failed to parse index specification');
+    }
   };
 
   const confirmCreateIndex = () => {
+    if (!selectedIndex) {
+      console.error('No index selected');
+      setError('No index selected');
+      return;
+    }
+    
+    console.log('Creating index:', {
+      collection: selectedIndex.collection,
+      indexSpec: selectedIndex.indexSpec
+    });
+    
     setLoading(true);
-    Meteor.call('mongodb.createIndex', selectedIndex, (error) => {
+    Meteor.call('mongodb.createIndex', selectedIndex.collection, selectedIndex.indexSpec, (error) => {
       setLoading(false);
       if (error) {
+        console.error('Index creation error:', error);
         setError(error.message);
       } else {
         setError(null);
