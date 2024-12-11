@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MongoDBInsights } from './MongoDBInsights.jsx';
 import { Login } from './Login.jsx';
 import { Meteor } from 'meteor/meteor';
+import { useTracker } from 'meteor/react-meteor-data';
 
 export const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated } = useTracker(() => {
+    return {
+      isAuthenticated: !!Meteor.userId()
+    };
+  });
 
   const handleLogin = (credentials) => {
     Meteor.loginWithPassword(credentials.username, credentials.password, (error) => {
       if (error) {
         console.error('Login failed:', error.reason);
-      } else {
-        setIsAuthenticated(true);
       }
     });
   };
@@ -20,8 +23,6 @@ export const App = () => {
     Meteor.logout((error) => {
       if (error) {
         console.error('Logout failed:', error.reason);
-      } else {
-        setIsAuthenticated(false);
       }
     });
   };
