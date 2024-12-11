@@ -14,7 +14,7 @@ export const App = () => {
   const handleLogin = (credentials) => {
     Meteor.loginWithPassword(credentials.username, credentials.password, (error) => {
       if (error) {
-        console.error('Login failed:', error.reason);
+        console.error('Login failed:', error instanceof Meteor.Error ? error.reason : error.message);
       }
     });
   };
@@ -22,7 +22,7 @@ export const App = () => {
   const handleLogout = () => {
     Meteor.logout((error) => {
       if (error) {
-        console.error('Logout failed:', error.reason);
+        console.error('Logout failed:', error instanceof Meteor.Error ? error.reason : error.message);
       }
     });
   };
