@@ -92,7 +92,10 @@ const getProfileQueries = async ({ minMillis = 100, collection = null, startDate
   const filter = {
     millis: { $gte: minMillis },
     op: { $in: ['query', 'command'] },
-    'command.aggregate': { $exists: true },
+    $or: [
+      { 'command.aggregate': { $exists: true } },
+      { 'command.find': { $exists: true } }
+    ],
     ns: { $ne: getMongoDB().databaseName + '.system.profile' } // Exclude system.profile collection
   };
 
@@ -126,12 +129,43 @@ const analyzeQueries = async ({ minMillis = 100, collection = null, startDate = 
 
     const generateIndexSuggestion = (query) => {
       if (query.op === 'query') {
-        if (query.query && Object.keys(query.query).length > 0) {
-          const fields = Object.keys(query.query);
-          return `db.${query.ns.split('.')[1]}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
-        } else if (query.orderby && Object.keys(query.orderby).length > 0) {
-          const fields = Object.keys(query.orderby);
-          return `db.${query.ns.split('.')[1]}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
+        if (query.command?.filter && Object.keys(query.command.filter).length > 0) {
+          const fields = [];
+          const filter = query.command.filter;
+          
+          // Handle direct field filters
+          Object.keys(filter).forEach(field => {
+            if (field !== '$and' && field !== '$or') {
+              fields.push(field);
+            }
+          });
+          
+          // Handle $and conditions
+          if (filter.$and) {
+            filter.$and.forEach(condition => {
+              Object.keys(condition).forEach(field => {
+                if (!fields.includes(field)) {
+                  fields.push(field);
+                }
+              });
+            });
+          }
+
+          // Handle $or conditions
+          if (filter.$or) {
+            filter.$or.forEach(condition => {
+              Object.keys(condition).forEach(field => {
+                if (!fields.includes(field)) {
+                  fields.push(field);
+                }
+              });
+            });
+          }
+
+          if (fields.length > 0) {
+            const collection = query.command.find || query.ns.split('.')[1];
+            return `db.${collection}.createIndex({ ${fields.map(f => `${f}: 1`).join(', ')} })`;
+          }
         }
       } else if (query.op === 'command' && query.command?.aggregate) {
         const pipeline = query.command.pipeline;
@@ -199,8 +233,9 @@ const analyzeQueries = async ({ minMillis = 100, collection = null, startDate = 
     if (query.op === 'query') {
       queryDetails = {
         type: 'find',
-        filter: query.query || {},
-        sort: query.orderby
+        filter: query.command?.filter || query.query || {},
+        projection: query.command?.projection,
+        sort: query.command?.sort || query.orderby
       };
     } else if (query.op === 'command' && query.command?.aggregate) {
       queryDetails = {
